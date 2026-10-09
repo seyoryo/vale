@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Vale – Mobile Banking Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#040f15; --card:#0e1e31; --txt:#f4f6f8; --mut:#b4bcc5; --dim:#98a3ae;
+  --blue:#5a9bd8; --gold:#ffc83d; --green:#5cb85f; --line:#283b50; --navy:#0a1827;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#07090c;overflow:hidden}
+body{font-family:'Figtree',-apple-system,'Helvetica Neue',Arial,sans-serif;color:var(--txt);-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+svg{display:block}
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#phone{position:relative;width:430px;height:872px;flex:none;background:var(--bg);overflow:hidden;border-radius:56px;
+  box-shadow:0 0 0 9px #14171b,0 0 0 11px #2a2f35,0 30px 90px rgba(0,0,0,.65);transform-origin:center center;user-select:none;-webkit-user-select:none}
+@media (max-width:520px){#phone{border-radius:0;box-shadow:none}}
+
+#frame{position:absolute;left:0;top:-60px;width:430px;height:932px}
+/* ---------- status bar (removed) ---------- */
+
+/* ---------- screens ---------- */
+.screen{position:absolute;inset:0;background:var(--bg);transition:transform .34s cubic-bezier(.32,.72,.24,1),opacity .34s}
+.scroll{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.35) transparent;overscroll-behavior:contain}
+.scroll::-webkit-scrollbar{width:3px}
+.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.35);border-radius:2px}
+#home.under{transform:translateX(-26%);opacity:.55}
+#txn{transform:translateX(100%);visibility:hidden}
+#txn.open{transform:translateX(0);visibility:visible}
+#txn.settling{visibility:visible}
+.topfade{position:absolute;left:0;right:0;top:0;height:119px;z-index:90;pointer-events:none;background:linear-gradient(to bottom,rgba(4,15,21,.97) 0,rgba(4,15,21,.9) 52%,rgba(4,15,21,0) 100%)}
+
+/* ---------- cards ---------- */
+.card{position:relative;background:var(--card);border-radius:6px;margin:0 16px 17px;overflow:hidden}
+.ctitle{font-size:24px;line-height:30px;font-weight:700;padding:13px 16px 0;height:56px;letter-spacing:-.1px}
+.hr{height:1px;background:var(--line);margin-left:16px}
+.lnk{display:flex;align-items:center;justify-content:center;color:var(--blue);font-size:17px;font-weight:500;cursor:pointer}
+.icons{display:grid;padding:7px 16px 0;height:78px}
+.icons.i4{grid-template-columns:repeat(4,1fr)}
+.icons.i2{grid-template-columns:repeat(2,1fr)}
+.ic{display:flex;flex-direction:column;align-items:center;cursor:pointer}
+.ic svg{width:28px;height:28px;color:#fff;--dk:#0e1e31}
+.ic span{margin-top:11px;font-size:14.5px;line-height:16px;color:#f1f4f7;white-space:nowrap}
+.ic sup{font-size:8px;line-height:0;vertical-align:top;position:relative;top:3px}
+.arow{position:relative;display:flex;align-items:center;padding:12px 16px;cursor:pointer}
+.arow::after{content:"";position:absolute;left:16px;right:0;bottom:0;height:1px;background:var(--line)}
+.aleft{flex:1}
+.aname{font-size:17px;line-height:22px;letter-spacing:.15px;color:#f4f6f8}
+.asub{font-size:13.5px;line-height:18px;margin-top:3px;color:var(--dim)}
+.amt{color:var(--blue);font-size:17px;font-weight:600;margin-right:10px;padding:6px 0 6px 10px;letter-spacing:.1px}
+.amt:focus-visible,.arow:focus-visible,.lnk:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:4px}
+.chev{width:12px;height:16px;color:#fff;flex:none}
+.assets{display:flex;align-items:center;height:59px;padding:0 38px 0 16px;color:var(--mut);font-size:16.5px}
+.assets span:first-child{flex:1}
+.assets span:last-child{color:#c3cad1}
+.assets.nobord{position:relative}
+.obtn{display:flex;align-items:center;justify-content:center;height:45px;margin:0 16px 17px;border:1px solid #3e78b3;background:#0c1a2a;color:var(--blue);font-size:17px;font-weight:500;border-radius:4px;cursor:pointer}
+.h2{font-size:20px;line-height:26px;font-weight:700}
+
+/* ---------- home ---------- */
+#homeInner{padding:124px 0 150px}
+.greet{margin:0 16px 26px;font-size:22px;line-height:28px;font-weight:700;letter-spacing:-.1px}
+.greet span{color:var(--gold);transition:opacity .2s}
+.greet.nojesse span{opacity:0}
+#homeContent{opacity:0;transition:opacity .35s}
+#homeContent.show{opacity:1}
+.dup{height:152px}
+.duph{display:flex;align-items:center;padding:12px 16px 0;height:34px}
+.dcircle{width:22px;height:22px;border-radius:50%;background:#fff;color:var(--card);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex:none}
+.dt{font-size:17px;font-weight:500;margin-left:8px;flex:1;white-space:nowrap}
+.x{width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-right:-4px;color:#fff}
+.dup p{padding:14px 16px 0;font-size:15px;line-height:19.5px;color:var(--mut);height:81px}
+.dup .hr{margin-top:6px}
+.dup .lnk{height:48px}
+.dup{transition:opacity .25s}
+.bank .assets{border-bottom:1px solid var(--line)}
+.bank .assets{margin-left:0}
+.bank .lnk{height:51px}
+.ins .lnk,.ret .lnk{height:46px}
+.ins{height:180px}.ret{height:181px}
+.cred{height:151px}
+.credh{display:flex;align-items:center;padding:12px 16px 0;height:44px;font-size:17px;font-weight:600}
+.credh svg{width:20px;height:20px;margin-right:8px;color:#fff}
+.cred p{padding:0 16px;font-size:14.5px;line-height:20.5px;color:var(--mut);height:60px;margin-top:2px}
+.cred .hr{margin-top:0}
+.cred .lnk{height:47px}
+.more{margin:41px 16px 21px}
+.benefit{position:relative;display:flex;align-items:center;height:71px;margin:0 16px 17px;background:var(--card);border-left:4px solid #4a8fe0;padding:0 14px 0 12px;border-radius:2px 6px 6px 2px;cursor:pointer}
+.benefit .bt{flex:1}
+.benefit .bt b{display:block;color:var(--blue);font-size:17px;font-weight:600;line-height:22px}
+.benefit .bt small{display:block;color:var(--mut);font-size:13px;line-height:18px;margin-top:2px}
+.trophy{width:44px;height:44px;border-radius:50%;background:#071018;display:flex;align-items:center;justify-content:center;color:#fff}
+.trophy svg{width:22px;height:22px}
+.perks{height:305px}
+.perks .ctitle{font-size:20px;line-height:28px;padding-top:14px;height:56px}
+.perkimg{height:130px;display:flex;align-items:center;justify-content:center}
+.crow{display:flex;align-items:center;padding:14px 16px 25px;position:relative}
+.crow .ct{flex:1}
+.crow b{display:block;font-weight:400;font-size:17px;line-height:22px}
+.crow small{display:block;margin-top:3px;font-size:13.5px;line-height:18px;color:var(--mut)}
+.perks .lnk{height:46px;border-top:1px solid var(--line);margin-left:16px}
+.legal{padding:34px 16px 0;font-size:14.5px;line-height:19.5px;color:var(--mut)}
+.legal a{color:var(--blue);text-decoration:underline;display:block;line-height:35.5px;font-size:14.5px;cursor:pointer}
+.legal .cp{line-height:35.5px}
+.legal .lead{font-weight:700;color:#e9edf1;margin-top:0;margin-bottom:14px}
+.legal ul{margin:0 0 14px;padding-left:14px;color:#e9edf1;font-weight:700}
+.legal li{margin-bottom:4px;padding-left:0}
+.legal p{margin-bottom:15px}
+.legal p a{display:inline;line-height:inherit}
+#profile{position:absolute;left:356px;top:74px;width:40px;height:40px;border-radius:50%;background:#101d2b;border:1px solid #1d3145;z-index:120;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .12s}
+#profile.on{opacity:1}
+#profile svg{width:20px;height:20px;color:#fff}
+#badge{position:absolute;left:23px;top:-7px;min-width:26px;height:17px;border-radius:9px;background:#d9534f;color:#fff;font-size:11px;font-weight:700;line-height:17px;text-align:center;padding:0 4px;transform:scale(0);transition:transform .18s cubic-bezier(.3,1.6,.5,1)}
+#badge.on{transform:scale(1)}
+
+/* ---------- tab bar ---------- */
+#tabbar{position:absolute;left:21px;top:850px;width:388px;height:60px;border-radius:30px;background:rgba(9,19,28,.84);
+  -webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);border:1px solid rgba(70,120,170,.34);z-index:300;display:flex;
+  justify-content:space-between;padding:0 8px;opacity:0;pointer-events:none;transition:opacity .15s}
+#tabbar.on{opacity:1;pointer-events:auto}
+.tab{position:relative;width:93px;height:60px;color:#fff;--dk:#0a141d;display:flex;flex-direction:column;align-items:center}
+.tab svg{width:28px;height:28px;margin-top:7px;position:relative}
+.tab span{position:relative;font-size:12.5px;line-height:14px;margin-top:1px;font-weight:500}
+.tab.active{color:#6bb0f5}
+.tab.active::before{content:"";position:absolute;left:50%;margin-left:-51px;width:102px;top:3px;bottom:3px;border-radius:26px;background:rgba(72,100,132,.5)}
+
+/* ---------- login ---------- */
+#login{position:absolute;inset:0;background:var(--bg);z-index:200;transition:background .16s linear}
+#login.s1{background:var(--navy)}
+#login .fade{opacity:0;transition:opacity .22s}
+#login.s2 .fade{opacity:1}
+#lg{position:absolute;left:50%;width:48px;margin-left:-24px;top:430px;opacity:0;transition:top .18s ease-out,opacity .16s;display:flex;flex-direction:column;align-items:center;color:#c9d2db}
+#lg svg{width:26px;height:26px}
+#lg b{font-size:11px;letter-spacing:.6px;font-weight:700;line-height:12px;margin-top:3px}
+#login.s0 #lg{opacity:.4}
+#login.s1 #lg{top:72px;opacity:1}
+#menu{position:absolute;left:345px;top:74px;width:64px;height:43px;border-radius:22px;border:1px solid rgba(80,120,160,.28);background:rgba(255,255,255,.03);
+  display:flex;align-items:center;justify-content:center;font-size:17px;color:#b9bdc2}
+#hello{position:absolute;left:0;right:0;top:214px;text-align:center;font-size:24px;line-height:32px;font-weight:700;color:#b9bdc2}
+#hello i{display:block;width:88px;height:2px;background:#c5a52d;margin:9px auto 0}
+#dots{position:absolute;left:0;right:0;top:329px;display:flex;justify-content:center;gap:19px}
+#dots i{width:17px;height:17px;border-radius:50%;border:1.4px solid #b9bdc2}
+#usepw{position:absolute;left:0;right:0;top:797px;display:flex;justify-content:center;align-items:center;gap:9px;color:#4780b3;font-size:17px;line-height:24px}
+#usepw svg{width:9px;height:14px}
+#seccode{position:absolute;left:0;right:0;top:841px;text-align:center;font-size:15px;line-height:24px;color:#b4bac1;white-space:pre}
+#seccode b{font-weight:700;color:#d2d7dc}
+.spin{position:absolute;left:50%;width:84px;height:84px;margin-left:-42px;border-radius:50%;
+  background:conic-gradient(from 0deg,rgba(255,255,255,.06) 0deg,rgba(255,255,255,.18) 120deg,rgba(255,255,255,.55) 240deg,#fff 352deg,rgba(255,255,255,0) 360deg);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 4.4px),#000 calc(100% - 4.2px));mask:radial-gradient(farthest-side,transparent calc(100% - 4.4px),#000 calc(100% - 4.2px));
+  animation:spin .95s linear infinite;opacity:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+#lspin{top:424px}
+#login.s2 #lspin{opacity:1}
+#boot{position:absolute;inset:0;background:var(--bg);z-index:190;display:none}
+#boot .spin{opacity:1;top:424px}
+#boot.shell .spin{top:475px}
+#boot.shell{background:transparent;pointer-events:none}
+
+/* ---------- face id ---------- */
+#faceid{position:absolute;left:143px;top:68px;width:144px;height:144px;border-radius:44px;background:#000;z-index:450;opacity:0;pointer-events:none;transition:opacity .15s;box-shadow:0 0 30px rgba(0,0,0,.5)}
+#faceid.on{opacity:1}
+#faceid svg{position:absolute;left:0;top:0;width:144px;height:144px}
+#swirl{transform-origin:72px 72px;animation:sw .5s linear infinite;filter:blur(1.6px)}
+@keyframes sw{0%{transform:rotate(0) scale(1,.8)}50%{transform:rotate(180deg) scale(.82,1)}100%{transform:rotate(360deg) scale(1,.8)}}
+#ring,#tick,#dot{opacity:0}
+#faceid.ring #swirl{display:none}
+#faceid.ring #ring{opacity:1}
+#faceid.dot #dot{opacity:1}
+#faceid.tick #dot{opacity:0}
+#faceid.tick #tick{opacity:1;stroke-dashoffset:0}
+#tick{stroke-dasharray:44;stroke-dashoffset:44;transition:stroke-dashoffset .16s ease-out}
+
+/* ---------- transactions ---------- */
+.thead{position:absolute;left:0;right:0;top:0;height:133px;z-index:100;pointer-events:none;background:linear-gradient(to bottom,rgba(4,15,21,.98) 0,rgba(4,15,21,.93) 62%,rgba(4,15,21,0) 100%)}
+#back{position:absolute;left:20px;top:74px;width:44px;height:44px;border-radius:50%;background:#101d2b;border:1px solid #1d3145;display:flex;align-items:center;justify-content:center;z-index:110}
+#back svg{width:10px;height:16px;color:#c9d1d9}
+#ttitle{position:absolute;left:70px;right:70px;top:85px;text-align:center;font-size:17px;line-height:22px;color:#f4f6f8;z-index:110;letter-spacing:.2px;pointer-events:none}
+#txnInner{padding:128px 0 150px}
+.bal{height:100px;margin-bottom:0;padding:14px 16px 0;cursor:pointer}
+.bal .bt{display:flex;align-items:center;justify-content:space-between;font-size:20px;line-height:26px;font-weight:700}
+.bal .bt .chev{width:12px;height:16px}
+.bal .bv{font-size:27px;line-height:34px;font-weight:700;color:var(--blue);margin-top:8px}
+.qa{display:grid;grid-template-columns:repeat(4,1fr);height:123px;padding:34px 0 0;margin:0 16px}
+.qa .ic span{margin-top:9px;line-height:17px;font-size:14.5px;text-align:center}
+.qa .ic svg{width:30px;height:30px}
+.showrow{display:flex;align-items:center;justify-content:space-between;margin:0 16px;height:43px;font-size:15.5px;border-top:1px solid #31465c}
+.showrow .l{display:flex;align-items:center;gap:9px}
+.showrow svg{width:16px;height:10px}
+.rt{margin-top:14px}
+.rt .ctitle{display:flex;align-items:center;justify-content:space-between;font-size:20px;line-height:28px;height:38px;padding:10px 16px 0}
+.rt .ctitle svg{width:14px;height:14px;color:#fff}
+.rows{margin-top:10px}
+.tx{position:relative;display:flex;align-items:center;padding:16px 16px;cursor:pointer}
+.tx::after{content:"";position:absolute;left:16px;right:0;top:0;height:1px;background:var(--line)}
+.tx:first-child::after{display:none}
+.tile{width:49px;height:49px;border-radius:11px;border:1.4px solid #aeb4ba;background:#09131c;display:flex;align-items:center;justify-content:center;flex:none;color:#fff}
+.tile svg{width:28px;height:28px}
+.tt{flex:1;margin-left:11px;min-width:0}
+.tt .m{font-size:16px;line-height:20px;white-space:pre-line;color:#f4f6f8;letter-spacing:.1px}
+.tt .d{font-size:12.5px;line-height:16px;color:#a4aeb8;margin-top:3px}
+.tr{display:flex;flex-direction:column;align-items:flex-end;margin-right:10px}
+.pend{height:25px;padding:0 9px;border:1px solid #9aa9b8;border-radius:6px;font-size:12.5px;line-height:23px;margin-bottom:4px;color:#f1f4f7}
+.tr .a{font-size:16px;line-height:20px;font-weight:600;color:var(--blue)}
+.tr .a.pos{color:var(--green)}
+.tr .b{font-size:12.5px;line-height:16px;color:#c9d1d9;margin-top:1px}
+.more-tx{height:50px;border-top:1px solid var(--line);margin-left:16px;margin-top:2px}
+.sk{display:flex;align-items:center;padding:0 16px;height:110px;position:relative}
+.sk::after{content:"";position:absolute;left:16px;right:0;bottom:0;height:1px;background:var(--line)}
+.sk .tile{background:#0a1520;border-color:#8c9298;opacity:.9}
+.sk .bars{flex:1;margin-left:11px}
+.sk .bars i{display:block;height:11px;border-radius:2px;background:#27384a;margin-bottom:11px}
+.sk .bars i:nth-child(1){width:92%;height:12px}
+.sk .bars i:nth-child(2){width:11px;height:14px}
+.sk .bars i:nth-child(3){width:50%;height:9px;margin-bottom:9px}
+.sk .bars i:nth-child(4){width:68%;height:9px;margin:0}
+.shimmer{animation:sh 1.2s ease-in-out infinite alternate}
+@keyframes sh{from{opacity:.55}to{opacity:1}}
+.atm{margin-top:14px}
+.atmh{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0;height:42px;font-size:17px;font-weight:700}
+.atmh svg{width:14px;height:9px;color:#fff}
+.atm p{padding:0 16px;font-size:15px;line-height:22px;color:var(--mut);height:68px}
+.atm .hr{margin-top:3px}
+.atm .lnk{height:47px}
+.fs{display:flex;align-items:center;justify-content:space-between;margin:36px 16px 14px}
+.fs a{color:var(--blue);font-size:16px;cursor:pointer}
+.spend{height:381px}
+.spend h3{font-size:18px;line-height:24px;font-weight:700;padding:12px 16px 0;height:46px}
+.donut{display:flex;justify-content:center;height:140px;align-items:center}
+.donut .dn{position:relative;width:123px;height:123px;border-radius:50%;border:23px solid #7a7a7a;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;color:#fff}
+.spend .g1{font-size:16px;line-height:22px;padding:34px 16px 0;color:#f4f6f8}
+.spend .g2{font-size:12.5px;line-height:18px;padding:0 16px;color:var(--mut);margin-top:2px;height:41px}
+.spend .hr{margin-top:0}
+.spend .lnk{height:52px}
+.pager{display:flex;align-items:center;justify-content:space-between;margin:34px 16px 38px;font-size:12.5px;color:var(--mut)}
+.pager .nx{color:var(--blue);font-size:15.5px;display:flex;align-items:center;gap:6px;cursor:pointer}
+.pager .nx svg{width:7px;height:12px}
+.pager .c{position:absolute;left:0;right:0;text-align:center}
+.stm{height:235px}
+.stmh{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0;height:50px;font-size:20px;font-weight:700}
+.stmh svg{width:14px;height:9px;color:#fff}
+.srow{display:flex;align-items:center;justify-content:space-between;height:46px;padding:0 16px;font-size:16px;position:relative;cursor:pointer}
+.srow::after{content:"";position:absolute;left:16px;right:0;bottom:0;height:1px;background:var(--line)}
+.stm .lnk{height:56px}
+.tlegal{padding:2px 16px 0;font-size:12.5px;line-height:16.5px;color:var(--mut)}
+.tlegal p{margin-bottom:12px}
+
+/* ---------- edit modal ---------- */
+#modal{position:absolute;left:0;right:0;top:60px;bottom:0;z-index:600;background:rgba(0,4,8,.66);display:none;align-items:center;justify-content:center;opacity:0;transition:opacity .18s}
+#modal.show{display:flex}
+#modal.vis{opacity:1}
+.dlg{width:358px;background:#0e1e31;border:1px solid #234262;border-radius:14px;padding:22px 20px 20px;box-shadow:0 20px 60px rgba(0,0,0,.6);transform:translateY(14px) scale(.97);transition:transform .22s cubic-bezier(.3,1.2,.5,1)}
+#modal.vis .dlg{transform:none}
+.dlg h4{font-size:21px;line-height:26px;font-weight:700}
+.dlg .sub{font-size:14px;line-height:19px;color:var(--dim);margin-top:3px}
+.field{display:flex;align-items:center;margin-top:18px;height:62px;border:1.5px solid #3e78b3;background:#0a1624;border-radius:8px;padding:0 14px}
+.field:focus-within{border-color:#6bb0f5;box-shadow:0 0 0 3px rgba(90,155,216,.2)}
+.field i{font-style:normal;font-size:28px;font-weight:700;color:var(--blue);margin-right:4px}
+.field input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--blue);font:700 28px/36px 'Figtree',sans-serif;letter-spacing:.2px;user-select:text;-webkit-user-select:text}
+.err{min-height:20px;margin-top:8px;font-size:13.5px;color:#ff8a80}
+.dbtns{display:flex;gap:12px;margin-top:8px}
+.dbtns button{flex:1;height:46px;border-radius:6px;font-size:17px;font-weight:600}
+.dbtns .cancel{border:1px solid #3e78b3;color:var(--blue);background:#0c1a2a}
+.dbtns .save{background:var(--blue);color:#04121c}
+.dbtns button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+@media (prefers-reduced-motion:reduce){.screen,#modal,.dlg{transition-duration:.01s}}
+</style>
+</head>
+<body>
+
+<!-- ============ SVG SPRITE ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-logo" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.1"/><path d="M7.3 8.7 12 16.3l4.7-7.6" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-transfer" viewBox="0 0 28 28"><rect x="2" y="6" width="19" height="13" rx="2.2" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="11.5" cy="12.5" rx="3.6" ry="3.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="22" cy="19.5" r="5.4" fill="currentColor"/><path d="M19.6 19.5h4.8m-2-2.2 2.2 2.2-2.2 2.2" fill="none" stroke="var(--dk,#0e1e31)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-bill" viewBox="0 0 28 28"><rect x="5" y="2.5" width="18" height="23" rx="3.2" fill="currentColor"/><text x="14" y="14.4" text-anchor="middle" font-family="Arial,sans-serif" font-weight="700" font-size="12" fill="var(--dk,#0e1e31)">$</text><rect x="9" y="17.8" width="10" height="1.8" rx=".9" fill="var(--dk,#0e1e31)"/><rect x="9" y="21" width="6" height="1.8" rx=".9" fill="var(--dk,#0e1e31)"/></symbol>
+<symbol id="i-deposit" viewBox="0 0 28 28"><path d="M3 9V6a3 3 0 0 1 3-3h3M19 3h3a3 3 0 0 1 3 3v3M25 19v3a3 3 0 0 1-3 3h-3M9 25H6a3 3 0 0 1-3-3v-3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="8.5" y="9.5" width="11" height="9" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 16l2.6-2.6 2 2 2-1.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-send" viewBox="0 0 28 28"><path d="M3 13.5 25 4l-4.6 20-6-7-4.4 4.2V15z" fill="currentColor"/><path d="M10 15 25 4 14.4 17" fill="none" stroke="var(--dk,#0e1e31)" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+<symbol id="i-claims" viewBox="0 0 28 28"><path d="M6 4h11l5 5v14a1.8 1.8 0 0 1-1.8 1.8H7.8A1.8 1.8 0 0 1 6 23z" fill="currentColor"/><path d="M10 17.5 18.4 9l2.6 2.6L12.6 20l-3.2.6z" fill="var(--dk,#0e1e31)"/><rect x="10" y="21.6" width="9" height="1.6" rx=".8" fill="var(--dk,#0e1e31)"/></symbol>
+<symbol id="i-truck" viewBox="0 0 34 28"><path d="M2 20v-6a2 2 0 0 1 2-2h4l3-5h6l-1.4 5H22l3.5 4h4.5a2 2 0 0 1 2 2v2z" fill="currentColor"/><path d="M12.5 8.5 22 3l2 3.4-8 4.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="9" cy="21" r="3.6" fill="currentColor" stroke="var(--dk,#0e1e31)" stroke-width="1.6"/><circle cx="25" cy="21" r="3.6" fill="currentColor" stroke="var(--dk,#0e1e31)" stroke-width="1.6"/></symbol>
+<symbol id="i-id" viewBox="0 0 28 28"><rect x="2.5" y="5.5" width="23" height="17" rx="3" fill="currentColor"/><circle cx="10" cy="12.2" r="2.6" fill="var(--dk,#0e1e31)"/><path d="M5.8 19c.4-2.4 2.2-3.4 4.2-3.4s3.8 1 4.2 3.4z" fill="var(--dk,#0e1e31)"/><rect x="16" y="11" width="6.4" height="1.7" rx=".85" fill="var(--dk,#0e1e31)"/><rect x="16" y="15" width="6.4" height="1.7" rx=".85" fill="var(--dk,#0e1e31)"/></symbol>
+<symbol id="i-doc" viewBox="0 0 28 28"><path d="M6.5 3h10l5.5 5.5V23.5a1.8 1.8 0 0 1-1.8 1.8H8.3a1.8 1.8 0 0 1-1.8-1.8z" fill="currentColor"/><path d="M16.5 3v5.5H22" fill="none" stroke="var(--dk,#0e1e31)" stroke-width="1.4"/><rect x="10" y="13.5" width="8.4" height="1.7" rx=".85" fill="var(--dk,#0e1e31)"/><rect x="10" y="17.5" width="8.4" height="1.7" rx=".85" fill="var(--dk,#0e1e31)"/></symbol>
+<symbol id="i-trophy" viewBox="0 0 24 24"><path d="M7 3.5h10v6a5 5 0 0 1-10 0zM7 5.5H4.2c0 3 1.2 4.6 3.3 5M17 5.5h2.8c0 3-1.2 4.6-3.3 5M12 14.5v3.5M8.5 20.5h7M9.5 18h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-gauge" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7.8 12.4 2.7 2.7 5.2-6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-bank" viewBox="0 0 28 28"><path d="M2.5 9.5 12.5 3.5l10 6z" fill="currentColor"/><path d="M5.5 12.5v7M9.2 12.5v7M12.9 12.5v7M16.6 12.5v7M20.3 12.5v7" stroke="currentColor" stroke-width="2.1"/><rect x="2.5" y="21" width="20" height="2.4" rx="1" fill="currentColor"/></symbol>
+<symbol id="i-bankgear" viewBox="0 0 28 28"><path d="M2 9.5 11.5 3.5l9.5 6z" fill="currentColor"/><path d="M4.6 12.5v7M8.1 12.5v7M11.6 12.5v7M15.1 12.5v7M18.6 12.5v7" stroke="currentColor" stroke-width="2"/><rect x="2" y="21" width="15" height="2.4" rx="1" fill="currentColor"/><circle cx="22" cy="21" r="3.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-dasharray="2.2 1.35"/><circle cx="22" cy="21" r="1.6" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+<symbol id="i-cardgear" viewBox="0 0 28 28"><rect x="2" y="5.5" width="21" height="15" rx="3" fill="currentColor"/><rect x="2" y="9.2" width="21" height="3" fill="var(--dk,#0e1e31)"/><rect x="5" y="15.4" width="5" height="2" rx="1" fill="var(--dk,#0e1e31)"/><circle cx="22.4" cy="21" r="3.2" fill="var(--dk,#0e1e31)" stroke="currentColor" stroke-width="2.4" stroke-dasharray="2.2 1.35"/><circle cx="22.4" cy="21" r="1.4" fill="currentColor"/></symbol>
+<symbol id="i-exch" viewBox="0 0 28 28"><path d="M4 10h19m-5-5 5 5-5 5M24 19H5m5-5-5 5 5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" transform="translate(0 -1)"/></symbol>
+<symbol id="i-store" viewBox="0 0 28 28"><path d="M4.6 11 6.6 4.6h14.8l2 6.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M4.6 11c0 1.7 1.3 2.9 2.9 2.9s2.9-1.2 2.9-2.9c0 1.7 1.3 2.9 2.9 2.9s2.9-1.2 2.9-2.9c0 1.7 1.3 2.9 2.9 2.9s2.9-1.2 2.9-2.9" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 14.2v9.2h16v-9.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><rect x="11.2" y="17.2" width="5.6" height="6.2" rx=".6" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+<symbol id="i-search" viewBox="0 0 28 28"><circle cx="12" cy="12" r="7.8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="m18 18 6 6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+<symbol id="i-chat" viewBox="0 0 28 28"><path d="M5 4h18a2.4 2.4 0 0 1 2.4 2.4v11.2A2.4 2.4 0 0 1 23 20h-9l-6.4 5v-5H5a2.4 2.4 0 0 1-2.4-2.4V6.4A2.4 2.4 0 0 1 5 4z" fill="currentColor"/><rect x="8" y="8.4" width="12" height="1.9" rx=".95" fill="var(--dk,#0a141d)"/><rect x="8" y="12.4" width="8" height="1.9" rx=".95" fill="var(--dk,#0a141d)"/></symbol>
+<symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="7.6" r="4.2" fill="currentColor"/><path d="M3.8 21c.4-4.6 3.6-7 8.2-7s7.8 2.4 8.2 7z" fill="currentColor"/></symbol>
+<symbol id="i-chev" viewBox="0 0 12 16"><path d="m2.5 1.5 6 6.5-6 6.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-back" viewBox="0 0 10 16"><path d="m8 1.5-6 6.5 6 6.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-x" viewBox="0 0 22 22"><path d="m4.5 4.5 13 13m0-13-13 13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+<symbol id="i-down" viewBox="0 0 16 10"><path d="m1.5 1.8 6.5 6.4 6.5-6.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-up" viewBox="0 0 16 10"><path d="m1.5 8.2 6.5-6.4 6.5 6.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 11.2 20 4l-7.2 16-2-6.8z" fill="currentColor"/></symbol>
+<symbol id="i-mag" viewBox="0 0 16 16"><circle cx="6.8" cy="6.8" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m10.4 10.4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</defs></svg>
+
+<div id="stage">
+<div id="phone">
+<div id="frame">
+
+  <!-- ================= HOME ================= -->
+  <section id="home" class="screen" aria-label="Home">
+    <div id="homeScroll" class="scroll">
+      <div id="homeInner">
+        <div class="greet nojesse" id="greet">Good morning, <span>Jesse</span></div>
+        <div id="homeContent">
+
+          <div class="card bank">
+            <h2 class="ctitle">Banking</h2>
+            <div class="icons i4">
+              <div class="ic"><svg><use href="#i-transfer"/></svg><span>Transfer</span></div>
+              <div class="ic"><svg><use href="#i-bill"/></svg><span>Pay Bills</span></div>
+              <div class="ic"><svg><use href="#i-deposit"/></svg><span>Deposit</span></div>
+              <div class="ic"><svg><use href="#i-send"/></svg><span>Send</span></div>
+            </div>
+            <div class="arow" id="rowChk" role="button" tabindex="0" aria-label="Open Vale Classic Checking">
+              <div class="aleft"><div class="aname">VALE CLASSIC CHECKING</div><div class="asub">*4311</div></div>
+              <button class="amt" id="amtChk" aria-label="Edit checking balance">$2,563.67</button>
+              <svg class="chev"><use href="#i-chev"/></svg>
+            </div>
+            <div class="arow" id="rowSav" role="button" tabindex="0">
+              <div class="aleft"><div class="aname">VALE SAVINGS</div><div class="asub">*4338</div></div>
+              <button class="amt" id="amtSav" aria-label="Edit savings balance">$0.67</button>
+              <svg class="chev"><use href="#i-chev"/></svg>
+            </div>
+            <div class="assets"><span>Assets (+):</span><span id="assets">$2,564.34</span></div>
+            <div class="lnk" tabindex="0">Open account</div>
+          </div>
+
+          <div class="card ins">
+            <h2 class="ctitle">Insurance</h2>
+            <div class="icons i4">
+              <div class="ic"><svg><use href="#i-claims"/></svg><span>Claims</span></div>
+              <div class="ic"><svg style="width:34px"><use href="#i-truck"/></svg><span>Roadside</span></div>
+              <div class="ic"><svg><use href="#i-id"/></svg><span>ID Card</span></div>
+              <div class="ic"><svg><use href="#i-bill"/></svg><span>Bills</span></div>
+            </div>
+            <div class="lnk" tabindex="0">Get a quote</div>
+          </div>
+
+          <div class="card ret">
+            <h2 class="ctitle">Retirement &amp; Investing</h2>
+            <div class="icons i2">
+              <div class="ic"><svg><use href="#i-transfer"/></svg><span>Transfer</span></div>
+              <div class="ic"><svg><use href="#i-doc"/></svg><span>Documents</span></div>
+            </div>
+            <div class="lnk" tabindex="0">Open account</div>
+          </div>
+
+          <div class="card cred">
+            <div class="credh"><svg><use href="#i-gauge"/></svg>Get your credit score.</div>
+            <p>Credit score details at no cost to you and with no impact to your credit with Vale Credit Toolbox.</p>
+            <div class="hr"></div>
+            <div class="lnk" tabindex="0">Enroll now</div>
+          </div>
+
+          <h2 class="h2 more">More to explore</h2>
+
+          <div class="benefit">
+            <div class="bt"><b>My Member Benefits</b><small>View your savings and discounts.</small></div>
+            <div class="trophy"><svg><use href="#i-trophy"/></svg></div>
+          </div>
+
+          <div class="card perks">
+            <h2 class="ctitle">Savings and Discounts</h2>
+            <div class="perkimg">
+              <svg width="176" height="116" viewBox="0 0 176 116" aria-label="Vale Perks">
+                <defs><linearGradient id="dg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a6fb8"/><stop offset="1" stop-color="#103a6e"/></linearGradient></defs>
+                <path d="M88 4 168 58 88 112 8 58z" fill="url(#dg)" stroke="#6bb0f5" stroke-width="2.5" stroke-linejoin="round"/>
+                <g transform="translate(77 18)" color="#dbe9f7"><svg width="22" height="22" viewBox="0 0 24 24"><use href="#i-logo"/></svg></g>
+                <text x="88" y="66" text-anchor="middle" font-family="Figtree,Arial,sans-serif" font-weight="700" font-size="11" letter-spacing="3" fill="#bcd6f2">VALE</text>
+                <text x="88" y="88" text-anchor="middle" font-family="Figtree,Arial,sans-serif" font-weight="700" font-size="25" letter-spacing="1" fill="#fff">PERKS</text>
+              </svg>
+            </div>
+            <div class="crow"><div class="ct"><b>Cruise Savings</b><small>Book a cruise with Vale Perks and save up to 60%.</small></div><svg class="chev"><use href="#i-chev"/></svg></div>
+            <div class="lnk" tabindex="0" style="border-top:1px solid var(--line)">View all Vale Perks.</div>
+          </div>
+
+          <div class="obtn" tabindex="0">Customize</div>
+          <div class="obtn" tabindex="0">Link non-Vale account</div>
+
+          <div class="legal">
+            <a>Privacy</a>
+            <a>Vale Consumer Privacy Notice</a>
+            <div class="cp">Copyright © 2026 Vale</div>
+            <div class="lead">Prototype disclosures:</div>
+            <ul>
+              <li>Not a real bank, and not insured by any government agency</li>
+              <li>Balances shown are placeholder values you can edit</li>
+              <li>For design and demonstration purposes only</li>
+            </ul>
+            <p>Vale is a fictional brand created for this interface prototype. No deposit, credit card, lending, mortgage, or other banking products or services are offered.</p>
+            <p>Account names, numbers, merchants, and amounts are sample data. Nothing here is sponsored or endorsed by any third party, and no real funds are held or moved.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="topfade"></div>
+    <button id="profile" aria-label="Profile"><svg><use href="#i-person"/></svg><span id="badge">9+</span></button>
+  </section>
+
+  <!-- ================= TRANSACTIONS ================= -->
+  <section id="txn" class="screen" aria-label="Transactions">
+    <div id="txnScroll" class="scroll">
+      <div id="txnInner">
+        <div class="card bal" style="margin-bottom:0">
+          <div class="bt"><span>Available Balance</span><svg class="chev"><use href="#i-chev"/></svg></div>
+          <div class="bv" id="balTop">$2,563.67</div>
+        </div>
+        <div class="qa">
+          <div class="ic"><svg><use href="#i-bankgear"/></svg><span>Manage<br>Account</span></div>
+          <div class="ic"><svg><use href="#i-cardgear"/></svg><span>Manage Card</span></div>
+          <div class="ic"><svg><use href="#i-exch"/></svg><span>Pay &amp; Transfer</span></div>
+          <div class="ic"><svg><use href="#i-deposit"/></svg><span>Deposit</span></div>
+        </div>
+        <div class="showrow"><span class="l"><svg><use href="#i-down"/></svg>Show more</span><span>Edit</span></div>
+
+        <div class="card rt">
+          <div class="ctitle"><span>Recent Transactions</span><svg><use href="#i-mag"/></svg></div>
+          <div class="rows" id="rows"></div>
+          <div class="lnk more-tx" id="moreTx" style="display:none" tabindex="0">View more transactions</div>
+        </div>
+
+        <div class="card atm">
+          <div class="atmh"><span>Find a Vale ATM</span><svg><use href="#i-up"/></svg></div>
+          <p>You can use a Vale ATM or a Vale preferred ATM to avoid surcharge fees. Use our ATM locator to find one that meets your needs.</p>
+          <div class="hr"></div>
+          <div class="lnk" tabindex="0">Locate an ATM</div>
+        </div>
+
+        <div class="fs"><h2 class="h2">Financial Snapshot</h2><a>View all</a></div>
+        <div class="card spend">
+          <h3>October Spending</h3>
+          <div class="donut"><div class="dn">$0.00</div></div>
+          <div class="g1">Get insights as you start spending.</div>
+          <div class="g2">Check back for details on where your money is going.</div>
+          <div class="hr"></div>
+          <div class="lnk" tabindex="0">View spending snapshot</div>
+        </div>
+        <div class="pager" style="position:relative"><span class="c">1 of 3</span><span></span><span class="nx">Next <svg><use href="#i-chev"/></svg></span></div>
+
+        <div class="card stm">
+          <div class="stmh"><span>Recent Statements</span><svg><use href="#i-up"/></svg></div>
+          <div class="srow"><span>Oct. 3, 2026</span><svg class="chev"><use href="#i-chev"/></svg></div>
+          <div class="srow"><span>Sept. 5, 2026</span><svg class="chev"><use href="#i-chev"/></svg></div>
+          <div class="srow"><span>Aug. 5, 2026</span><svg class="chev"><use href="#i-chev"/></svg></div>
+          <div class="lnk" tabindex="0">View more statements</div>
+        </div>
+        <div class="obtn" tabindex="0">Customize</div>
+        <div class="tlegal">
+          <p>The trademarks, logos and names of other companies, products and services are the property of their respective owners.</p>
+          <p>Vale is a fictional brand used in this interface prototype. No real bank products are offered and no real funds are held.</p>
+        </div>
+      </div>
+    </div>
+    <div class="thead"></div>
+    <button id="back" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+    <div id="ttitle">VALE CLASSIC CHECKING</div>
+  </section>
+
+  <!-- ================= TAB BAR ================= -->
+  <nav id="tabbar" aria-label="Main">
+    <button class="tab active" id="tabHome"><svg><use href="#i-logo"/></svg><span>Home</span></button>
+    <button class="tab"><svg><use href="#i-bank"/></svg><span>Products</span></button>
+    <button class="tab"><svg><use href="#i-search"/></svg><span>Search</span></button>
+    <button class="tab"><svg><use href="#i-chat"/></svg><span>Chat</span></button>
+  </nav>
+
+  <!-- ================= BOOT / LOGIN ================= -->
+  <div id="boot"><div class="spin"></div></div>
+
+  <div id="login" aria-hidden="true">
+    <div id="lg"><svg><use href="#i-logo"/></svg><b>VALE</b></div>
+    <div id="menu" class="fade">Menu</div>
+    <div id="hello" class="fade">Hello, Jesse<i></i></div>
+    <div id="dots" class="fade"><i></i><i></i><i></i><i></i></div>
+    <div class="spin" id="lspin"></div>
+    <div id="usepw" class="fade">Use Password <svg viewBox="0 0 9 14"><path d="m1.5 1.5 5.2 5.5-5.2 5.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <div id="seccode" class="fade">Security Code:  <b id="scode">680728</b>  |  <span id="sleft">30</span></div>
+  </div>
+
+  <div id="faceid" aria-hidden="true">
+    <svg viewBox="0 0 144 144">
+      <g id="swirl"><ellipse cx="72" cy="72" rx="34" ry="27" fill="none" stroke="#6fe87a" stroke-width="5"/><ellipse cx="72" cy="72" rx="22" ry="30" fill="none" stroke="#3fc455" stroke-width="3" opacity=".7"/></g>
+      <circle id="ring" cx="72" cy="75" r="33" fill="none" stroke="#7be67f" stroke-width="4.2"/>
+      <circle id="dot" cx="72" cy="75" r="1.6" fill="#7be67f"/>
+      <path id="tick" d="M57.5 76.5 68 87l19-22" fill="none" stroke="#7be67f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <!-- ================= EDIT MODAL ================= -->
+  <div id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="dlg">
+      <h4 id="mTitle">Edit balance</h4>
+      <div class="sub" id="mSub"></div>
+      <label class="field"><i>$</i><input id="mInput" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" aria-label="Balance amount"></label>
+      <div class="err" id="mErr" role="alert"></div>
+      <div class="dbtns"><button class="cancel" id="mCancel">Cancel</button><button class="save" id="mSave">Save</button></div>
+    </div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var $ = function(id){return document.getElementById(id)};
+
+  /* ---------- fit phone to viewport ---------- */
+  var phone = $('phone');
+  function fit(){
+    var s = Math.min(window.innerWidth/430, window.innerHeight/872);
+    if (window.innerWidth > 520) s = Math.min(s*0.96, 1.5);
+    phone.style.transform = 'scale('+s+')';
+  }
+  window.addEventListener('resize', fit); fit();
+
+  /* ---------- data & formatting ---------- */
+  var checking = 256367;   // cents
+  var savings  = 67;       // cents
+  var TX = [
+    {m:'NEWBURY COMICS\n#3 100426', d:'10/04/2026', a:-3186, p:true},
+    {m:'SP SINISTRY 143 100626', d:'10/06/2026', a:-850, p:true},
+    {m:'MBTA MTICKET 100626', d:'10/06/2026', a:-1600, p:true},
+    {m:'LUCKY CHANCE\nNATICK MA', d:'10/05/2026', a:-551},
+    {m:'INTEREST PAID', d:'10/02/2026', a:2},
+    {m:"TST* JOE'S PIZZA -\nFENW BOSTON MA", d:'10/02/2026', a:-1605},
+    {m:'MBTA-550019299605\nBOSTON MA', d:'10/01/2026', a:-170},
+    {m:'MBTA-550019299605\nBOSTON MA', d:'09/30/2026', a:-240},
+    {m:'MBTA-550019299605\nBOSTON MA', d:'09/30/2026', a:-170},
+    {m:'MBTA-550019299605\nBOSTON MA', d:'09/30/2026', a:-170},
+    {m:'SQ *SAPPORO RAMEN\nEverett MA', d:'09/30/2026', a:-160},
+    {m:'MBTA-550019299605\nBOSTON MA', d:'09/30/2026', a:-70},
+    {m:'GOOGLE *G1AI101M\ng.co/helppay#CA', d:'09/30/2026', a:1911},
+    {m:'RED SOX TEAM STORE-\nPOS BOSTON MA', d:'09/28/2026', a:-8000},
+    {m:'ARMK FENWAY\nCONCESSION BOSTON\nMA', d:'09/28/2026', a:-2087}
+  ];
+  function fmt(c){
+    var neg = c < 0, v = Math.abs(c)/100;
+    return (neg?'-':'')+'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+  function esc(s){return s.replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+
+  var txLoaded = false;
+  function renderRows(){
+    var bal = checking, html = '';
+    for (var i=0;i<TX.length;i++){
+      var t = TX[i];
+      html += '<div class="tx"><div class="tile"><svg><use href="#i-store"/></svg></div>'+
+        '<div class="tt"><div class="m">'+esc(t.m)+'</div><div class="d">'+t.d+'</div></div>'+
+        '<div class="tr">'+(t.p?'<div class="pend">Pending</div>':'')+
+        '<div class="a'+(t.a>0?' pos':'')+'">'+fmt(t.a)+'</div><div class="b">'+fmt(bal)+'</div></div>'+
+        '<svg class="chev"><use href="#i-chev"/></svg></div>';
+      bal = bal - t.a;           // balance before this transaction = balance after the older one
+    }
+    $('rows').innerHTML = html;
+  }
+  function renderSkeleton(){
+    var h = '';
+    for (var i=0;i<5;i++) h += '<div class="sk shimmer"><div class="tile"></div><div class="bars"><i></i><i></i><i></i><i></i></div></div>';
+    $('rows').innerHTML = h; $('moreTx').style.display = 'none';
+  }
+  function render(){
+    $('amtChk').textContent = fmt(checking);
+    $('amtSav').textContent = fmt(savings);
+    $('assets').textContent = fmt(checking + savings);
+    $('balTop').textContent = fmt(checking);
+    if (txLoaded) renderRows();
+  }
+  render();
+
+  /* ---------- navigation ---------- */
+  var home = $('home'), txn = $('txn'), onTxn = false, navBusy = false, ready = false;
+  function openTxn(){
+    if (!ready || onTxn || navBusy) return;
+    navBusy = true; onTxn = true; txLoaded = false;
+    $('txnScroll').scrollTop = 0;
+    renderSkeleton();
+    txn.classList.add('settling');
+    void txn.offsetWidth;
+    txn.classList.add('open'); home.classList.add('under');
+    setTimeout(function(){ navBusy = false; }, 340);
+    setTimeout(function(){
+      if (!onTxn) return;
+      txLoaded = true; renderRows(); $('moreTx').style.display = 'flex';
+    }, 650);
+  }
+  function closeTxn(){
+    if (!onTxn || navBusy) return;
+    navBusy = true; onTxn = false;
+    txn.classList.remove('open'); home.classList.remove('under');
+    setTimeout(function(){ txn.classList.remove('settling'); navBusy = false; }, 360);
+  }
+  $('back').addEventListener('click', closeTxn);
+  $('tabHome').addEventListener('click', function(){ if (onTxn) closeTxn(); else $('homeScroll').scrollTo({top:0,behavior:'smooth'}); });
+
+  /* ---------- home interactions ---------- */
+  $('rowChk').addEventListener('click', openTxn);
+  $('rowChk').addEventListener('keydown', function(e){ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); openTxn(); } });
+  /* ---------- edit modal ---------- */
+  var modal = $('modal'), mInput = $('mInput'), editing = null, lastFocus = null;
+  function openEdit(kind){
+    if (!ready) return;
+    editing = kind; lastFocus = document.activeElement;
+    var isChk = kind === 'checking';
+    $('mTitle').textContent = isChk ? 'Edit checking balance' : 'Edit savings balance';
+    $('mSub').textContent = isChk ? 'VALE CLASSIC CHECKING  *4311' : 'VALE SAVINGS  *4338';
+    mInput.value = ((isChk?checking:savings)/100).toFixed(2);
+    $('mErr').textContent = '';
+    modal.classList.add('show'); void modal.offsetWidth; modal.classList.add('vis');
+    setTimeout(function(){ mInput.focus(); mInput.select(); }, 60);
+  }
+  function closeEdit(){
+    modal.classList.remove('vis');
+    setTimeout(function(){ modal.classList.remove('show'); }, 190);
+    editing = null;
+    if (lastFocus && lastFocus.focus) try{ lastFocus.focus({preventScroll:true}); }catch(e){}
+  }
+  function parseMoney(s){
+    s = String(s).trim().replace(/[$,\s]/g,'');
+    if (!/^-?(\d+\.?\d{0,2}|\.\d{1,2})$/.test(s)) return null;
+    var v = Math.round(parseFloat(s)*100);
+    if (!isFinite(v) || Math.abs(v) > 999999999999) return null;
+    return v;
+  }
+  function saveEdit(){
+    var v = parseMoney(mInput.value);
+    if (v === null){ $('mErr').textContent = 'Enter a valid amount, like 1250.00'; mInput.focus(); return; }
+    if (editing === 'checking') checking = v; else savings = v;
+    render(); closeEdit();
+  }
+  $('amtChk').addEventListener('click', function(e){ e.stopPropagation(); openEdit('checking'); });
+  $('amtSav').addEventListener('click', function(e){ e.stopPropagation(); openEdit('savings'); });
+  $('rowSav').addEventListener('click', function(e){ if (e.target.closest('.amt')) return; });
+  $('mSave').addEventListener('click', saveEdit);
+  $('mCancel').addEventListener('click', closeEdit);
+  modal.addEventListener('click', function(e){ if (e.target === modal) closeEdit(); });
+  document.addEventListener('keydown', function(e){
+    if (!modal.classList.contains('show')) return;
+    if (e.key === 'Escape') closeEdit();
+    if (e.key === 'Enter'){ e.preventDefault(); saveEdit(); }
+    if (e.key === 'Tab'){
+      var f = [mInput, $('mCancel'), $('mSave')], i = f.indexOf(document.activeElement);
+      e.preventDefault(); f[(i + (e.shiftKey?-1:1) + f.length) % f.length].focus();
+    }
+  });
+  mInput.addEventListener('input', function(){ $('mErr').textContent = ''; });
+
+  /* ---------- mouse drag-to-scroll (desktop) ---------- */
+  function dragScroll(el){
+    var down=false, moved=false, sy=0, st=0;
+    el.addEventListener('pointerdown', function(e){
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      down = true; moved = false; sy = e.clientY; st = el.scrollTop;
+    });
+    window.addEventListener('pointermove', function(e){
+      if (!down) return;
+      var s = parseFloat(phone.style.transform.replace(/[^\d.]/g,'')) || 1;
+      var dy = (e.clientY - sy)/s;
+      if (!moved && Math.abs(dy) > 5) moved = true;
+      if (moved) el.scrollTop = st - dy;
+    });
+    window.addEventListener('pointerup', function(){ down = false; });
+    el.addEventListener('click', function(e){ if (moved){ e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+  }
+  dragScroll($('homeScroll')); dragScroll($('txnScroll'));
+
+  /* ---------- startup sequence ---------- */
+  var login = $('login'), boot = $('boot'), face = $('faceid');
+  function T(ms, fn){ return setTimeout(fn, ms); }
+  function start(){
+    login.classList.add('s0');
+    T(30,   function(){ /* logo fades in at centre */ });
+    T(180,  function(){ login.classList.remove('s0'); login.classList.add('s1'); });
+    T(250,  function(){ login.classList.add('s2'); });
+    // Face ID overlay
+    T(650,  function(){ face.classList.add('on'); });
+    T(1130, function(){ face.classList.add('ring'); });
+    T(1250, function(){ face.classList.add('dot'); });
+    T(1340, function(){ face.classList.add('tick'); });
+    T(1780, function(){ face.classList.remove('on'); });
+    T(1960, function(){ face.className = ''; });
+    // security-code countdown
+    var n = 30, iv = setInterval(function(){ n--; if (n < 26) { clearInterval(iv); return; } $('sleft').textContent = n; }, 1050);
+    T(1000, function(){});
+    // hand-off to the dark loading screen
+    T(4450, function(){
+      login.style.display = 'none'; boot.style.display = 'block';
+    });
+    // header, tab bar and spinner reposition
+    T(5300, function(){
+      boot.classList.add('shell');
+      $('profile').classList.add('on'); $('tabbar').classList.add('on');
+    });
+    T(5700, function(){ $('badge').classList.add('on'); });
+    T(5900, function(){ $('greet').classList.remove('nojesse'); });
+    // content arrives
+    T(6400, function(){
+      $('homeContent').classList.add('show'); boot.style.display = 'none';
+    });
+    T(6750, function(){ ready = true; });
+  }
+  var started = false;
+  function go(){ if (started) return; started = true; start(); }
+  if (document.fonts && document.fonts.ready){
+    Promise.race([document.fonts.ready, new Promise(function(r){ setTimeout(r, 1200); })]).then(go);
+  } else go();
+})();
+</script>
+</body>
+</html>
